@@ -1,0 +1,2 @@
+yarn -s run validate:data
+git add -A -- data

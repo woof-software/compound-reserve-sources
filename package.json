@@ -1,0 +1,15 @@
+{
+  "name": "reserve-sources",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "format": "yarn prettier --write \"scripts/**/*.js\"",
+    "prepare": "yarn husky && yarn node scripts/setup-husky.js",
+    "validate:data": "yarn node scripts/validate-data.js"
+  },
+  "devDependencies": {
+    "ethers": "^6.16.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.0.0"
+  }
+}
