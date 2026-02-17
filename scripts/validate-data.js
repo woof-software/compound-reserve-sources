@@ -31,6 +31,7 @@ const typeValidators = {
 };
 
 const allowedTypes = new Set(Object.keys(typeValidators));
+const sortableFiles = new Set(['data/assets.json', 'data/sources.json']);
 
 // --- Shared context factory ---
 
@@ -202,7 +203,59 @@ function validateFilesStep(ctx) {
 }
 
 /**
- * Step D — Normalize address fields to checksummed EVM addresses.
+ * Step D — Ensure item IDs are unique inside each loaded file.
+ * Skips when earlier validation already found errors.
+ */
+function validateUniqueIdsStep(ctx) {
+  if (ctx.errors.length > 0) return;
+  if (!ctx.loadedFiles || ctx.loadedFiles.length === 0) return;
+
+  for (const loaded of ctx.loadedFiles) {
+    const seenIds = new Set();
+    const duplicateIds = new Set();
+
+    loaded.data.forEach((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+      if (!Object.prototype.hasOwnProperty.call(item, 'id')) return;
+
+      const { id } = item;
+      if (seenIds.has(id)) {
+        duplicateIds.add(id);
+        return;
+      }
+      seenIds.add(id);
+    });
+
+    if (duplicateIds.size > 0) {
+      const duplicates = Array.from(duplicateIds).join(', ');
+      ctx.errors.push(`[${loaded.file}] Duplicate id values found: ${duplicates}`);
+    }
+  }
+}
+
+/**
+ * Step E — Sort selected files by id in descending order.
+ * Runs only when earlier validation succeeded.
+ */
+function sortByDescendingIdStep(ctx) {
+  if (ctx.errors.length > 0) return;
+  if (!ctx.loadedFiles || ctx.loadedFiles.length === 0) return;
+
+  for (const loaded of ctx.loadedFiles) {
+    if (!sortableFiles.has(loaded.file)) continue;
+
+    const sorted = [...loaded.data].sort((a, b) => b.id - a.id);
+    const isDifferentOrder = sorted.some((item, index) => item !== loaded.data[index]);
+
+    if (isDifferentOrder) {
+      loaded.data.splice(0, loaded.data.length, ...sorted);
+      loaded.changed = true;
+    }
+  }
+}
+
+/**
+ * Step F — Normalize address fields to checksummed EVM addresses.
  * Runs only when validation passed (no errors). For each loaded file and item,
  * applies getAddress to address and nullableAddress fields. Invalid values
  * are not fixed; normalization errors are recorded.
@@ -241,11 +294,11 @@ function normalizeStep(ctx) {
 }
 
 /**
- * Step E — Persist normalized files to disk.
- * Runs only when validation/normalization succeeded; writes only files marked
- * as changed, using temp-file + rename for safer replacement.
+ * Step G — Persist changed files to disk.
+ * Runs only when validation/transformations succeeded; writes only files
+ * marked as changed, using temp-file + rename for safer replacement.
  */
-function persistNormalizedStep(ctx) {
+function persistChangedFilesStep(ctx) {
   if (ctx.errors.length > 0) return;
   if (!ctx.loadedFiles || ctx.loadedFiles.length === 0) return;
 
@@ -265,13 +318,13 @@ function persistNormalizedStep(ctx) {
       } catch (_cleanupError) {
         // Best effort cleanup only.
       }
-      ctx.errors.push(`[${loaded.file}] Failed to write normalized file: ${error.message}`);
+      ctx.errors.push(`[${loaded.file}] Failed to write changed file: ${error.message}`);
     }
   }
 }
 
 /**
- * Step F — Finalize: report results and exit.
+ * Step H — Finalize: report results and exit.
  * This is the single place that decides whether to print errors or success.
  */
 function finalizeStep(ctx) {
@@ -286,11 +339,11 @@ function finalizeStep(ctx) {
   const rewritten = (ctx.loadedFiles ?? []).filter((loaded) => loaded.changed);
 
   if (rewritten.length === 0) {
-    console.log('No files needed normalization.');
+    console.log('No files needed normalization or sorting.');
     return;
   }
 
-  console.log('Normalized files (rewritten):');
+  console.log('Rewritten files (normalized and/or sorted):');
   for (const loaded of rewritten) {
     const ids = Array.from(loaded.normalizedIds ?? []);
     const idsText = ids.length > 0 ? ids.join(', ') : '(no ids tracked)';
@@ -316,8 +369,10 @@ const steps = [
   loadConfigStep,
   validateConfigStep,
   validateFilesStep,
+  validateUniqueIdsStep,
+  sortByDescendingIdStep,
   normalizeStep,
-  persistNormalizedStep,
+  persistChangedFilesStep,
   finalizeStep,
 ];
 const ctx = createContext();
