@@ -11,17 +11,6 @@
     "type": "TMMC"
   },
   {
-    "id": 116,
-    "address": "0x72Bf2D7b05152ef282805F3e38752c436d94e4AF",
-    "market": null,
-    "algorithm": "{woof_payment_stream_contract}",
-    "startBlock": 24578426,
-    "endBlock": null,
-    "chainId": 1,
-    "assetId": 3,
-    "type": "WOOF Payment Stream Contract"
-  },
-  {
     "id": 115,
     "address": "0xDcB34b56842F853A69E86De5A0c22c49d97C130C",
     "market": null,
