@@ -1,5 +1,16 @@
 [
   {
+    "id": 118,
+    "address": "0x9Ff30Eb949CD6D88386923B115d69841A856d862",
+    "market": null,
+    "algorithm": "{woof_payment_stream_contract}",
+    "startBlock": 25172611,
+    "endBlock": null,
+    "chainId": 1,
+    "assetId": 3,
+    "type": "WOOF Payment Stream Contract"
+  },
+  {
     "id": 117,
     "address": "0x8BacCcA3e83843555867b3865d7689D099406567",
     "market": null,
